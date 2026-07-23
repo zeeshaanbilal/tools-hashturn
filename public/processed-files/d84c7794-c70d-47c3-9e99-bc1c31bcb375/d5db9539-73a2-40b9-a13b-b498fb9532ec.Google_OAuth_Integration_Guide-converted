@@ -1,0 +1,151 @@
+Google OAuth Implementation Guide
+
+Step-by-Step Technical Instructions & AI Prompt Integration
+
+Target Tech Stack: Astro • Prisma ORM • Node.js / Express • Google Identity Services
+
+Document Type: Technical Reference & Integration Guide
+
+1. Overview
+
+This guide outlines the end-to-end integration process for adding a secure "Continue with Google" authentication
+
+flow into your web application. It includes Google Cloud Console configuration, frontend button mounting, backend
+
+token verification, database schema design, and ready-to-use AI prompts.
+
+2. Google Cloud Console Configuration
+
+Navigate to Google Cloud Console (console.cloud.google.com).
+
+Create a new project or select an existing one.
+
+Go to APIs & Services > OAuth consent screen, select External, and complete app details.
+
+Go to Credentials > Create Credentials > OAuth client ID.
+
+Select Web application as the application type.
+
+Configure the origin and callback URLs carefully:
+
+Authorized JavaScript Origins: http://localhost:4321 (Dev), https://yourdomain.com (Prod)
+
+Authorized Redirect URIs: http://localhost:4321/api/auth/callback/google
+
+Save the generated Client ID and Client Secret into your .env file.
+
+3. Frontend Integration Code (Astro / HTML)
+
+Add the Google Identity Services SDK and render the sign-in button in your layout or client component:
+
+1.
+
+2.
+
+3.
+
+4.
+
+5.
+
+6.
+
+◦
+
+◦
+
+7.
+
+<!-- Load Google Identity Services SDK -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<!-- Google Sign-In Initialization & Button -->
+<div id="g_id_onload"
+     data-client_id="YOUR_GOOGLE_CLIENT_ID"
+     data-context="signin"
+     data-ux_mode="popup"
+     data-callback="handleCredentialResponse"
+     data-auto_prompt="false">
+</div>
+
+<div class="g_id_signin"
+     data-type="standard"
+     data-shape="rectangular"
+     data-theme="outline"
+     data-text="signin_with"
+     data-size="large">
+</div>
+
+<script>
+  function handleCredentialResponse(response) {
+     // Send the JWT credential token to backend endpoint
+     fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: response.credential })
+     });
+  }
+</script>
+
+4. Backend Verification Code (Node.js & Prisma)
+
+Verify incoming JWT tokens on the server using google-auth-library before creating or authenticating
+
+sessions:
+
+const { OAuth2Client } = require('google-auth-library');
+const { PrismaClient } = require('@prisma/client');
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const prisma = new PrismaClient();
+
+async function handleGoogleLogin(req, res) {
+  const { token } = req.body;
+
+const ticket = await client.verifyIdToken({
+    idToken: token,
+    audience: process.env.GOOGLE_CLIENT_ID,
+  });
+
+const payload = ticket.getPayload();
+  const { sub: googleId, email, name, picture } = payload;
+
+// Upsert user in database
+  let user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    user = await prisma.user.create({
+      data: { email, name, googleId, avatar: picture }
+    });
+  }
+
+return res.json({ success: true, user });
+}
+
+5. AI Coding Assistant Prompt
+
+If you prefer an AI assistant to write the complete implementation directly into your repository, copy and run the
+
+prompt below:
+
+Copy & Paste Prompt for AI Assistant:
+
+Act as an expert Full-Stack Web Developer. I need to integrate a fully functional and secure "Continue with Google"
+(Google OAuth 2.0 / Google Identity Services) authentication system into my web application.
+
+My current tech stack is:
+- Frontend: Astro
+- Backend/Database: Prisma ORM / Node.js
+
+Please provide a complete, production-ready implementation guide covering:
+1. Google Cloud Console Setup: Key settings for origins and callbacks.
+2. Frontend Component: Astro code to load script and mount sign-in button.
+3. Backend Endpoint: Verification logic using `google-auth-library`.
+4. Prisma Integration: Schema updates (`googleId` field) and account upsert logic.
+5. Best Practices: Environment variable security and error handling.
+
+Important Note: Never expose your GOOGLE_CLIENT_SECRET on the frontend or commit it to public repositories. Always
+
+restrict Google API keys to authorized domains.
+
+Google OAuth Integration Guide • Generated for HashTurn Technical Documentation
+
