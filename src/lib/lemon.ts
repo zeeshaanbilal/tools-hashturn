@@ -1,5 +1,5 @@
 import { lemonSqueezySetup } from "@lemonsqueezy/lemonsqueezy.js";
 
 lemonSqueezySetup({
-  apiKey: process.env.LEMON_SQUEEZY_API_KEY!,
+  apiKey: process.env.LEMON_SQUEEZY_API_KEY || "dummy_key_for_build",
 });
