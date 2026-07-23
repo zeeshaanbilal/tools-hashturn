@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireToolAuth } from "../utils/auth";
 import { withToolAuth } from "@/lib/withToolAuth";
-import { exec, execFile } from "child_process";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
+import { PDFDocument, rgb } from "pdf-lib";
 
 async function handler(req: NextRequest, props: any, userId: string) {
   try {
@@ -22,38 +19,38 @@ async function handler(req: NextRequest, props: any, userId: string) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    
-    const tmpDir = os.tmpdir();
-    const id = Math.random().toString(36).substring(7);
-    const inputPath = path.join(tmpDir, `input_${id}.pdf`);
-    const outputPath = path.join(tmpDir, `output_${id}.pdf`);
-    
-    try {
-      await fs.writeFile(inputPath, buffer);
+    const pdfDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
+    const pages = pdfDoc.getPages();
+
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i];
+      const { width, height } = page.getSize();
+      const text = `Page ${i + 1} of ${pages.length}`;
       
-      await new Promise((resolve, reject) => {
-        const scriptPath = path.join(process.cwd(), 'page_numbers.py');
-        execFile("python", [scriptPath, inputPath, outputPath], { maxBuffer: 1024 * 1024 * 50 }, (error, stdout, stderr) => {
-          if (error) reject(new Error(stderr || error.message || "Unknown execution error"));
-          else resolve(stdout);
-        });
-      });
+      // We estimate width of text
+      const textSize = 12;
+      const textWidth = text.length * 6; // Rough estimate
       
-      const outBuffer = await fs.readFile(outputPath);
-      return new NextResponse(outBuffer as any, {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${file.name.replace(/\.pdf$/i, '')}_numbered.pdf"`,
-        },
+      page.drawText(text, {
+        x: width / 2 - textWidth / 2,
+        y: 20,
+        size: textSize,
+        color: rgb(0, 0, 0),
       });
-    } finally {
-      await fs.unlink(inputPath).catch(() => {});
-      await fs.unlink(outputPath).catch(() => {});
     }
-  } catch (err) {
+
+    const pdfBytes = await pdfDoc.save();
+
+    return new NextResponse(pdfBytes as any, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${file.name.replace(/\.pdf$/i, '')}-numbered.pdf"`,
+      },
+    });
+  } catch (err: any) {
     console.error("Page Numbers Error:", err);
     return NextResponse.json(
-      { error: "Failed to process PDF. Please check if the file is valid and not corrupted." },
+      { error: err.message || "Failed to add page numbers." },
       { status: 500 }
     );
   }

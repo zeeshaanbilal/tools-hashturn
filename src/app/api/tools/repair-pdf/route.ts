@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireToolAuth } from "../utils/auth";
 import { withToolAuth } from "@/lib/withToolAuth";
-import { exec, execFile } from "child_process";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
+import { PDFDocument } from "pdf-lib";
 
 async function handler(req: NextRequest, props: any, userId: string) {
   try {
@@ -23,37 +20,20 @@ async function handler(req: NextRequest, props: any, userId: string) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     
-    const tmpDir = os.tmpdir();
-    const id = Math.random().toString(36).substring(7);
-    const inputPath = path.join(tmpDir, `input_${id}.pdf`);
-    const outputPath = path.join(tmpDir, `output_${id}.pdf`);
-    
-    try {
-      await fs.writeFile(inputPath, buffer);
-      
-      await new Promise((resolve, reject) => {
-        const scriptPath = path.join(process.cwd(), 'repair_pdf.py');
-        execFile("python", [scriptPath, inputPath, outputPath], { maxBuffer: 1024 * 1024 * 50 }, (error, stdout, stderr) => {
-          if (error) reject(new Error(stderr || error.message || "Unknown execution error"));
-          else resolve(stdout);
-        });
-      });
-      
-      const outBuffer = await fs.readFile(outputPath);
-      return new NextResponse(outBuffer as any, {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${file.name.replace(/\.pdf$/i, '')}_repaired.pdf"`,
-        },
-      });
-    } finally {
-      await fs.unlink(inputPath).catch(() => {});
-      await fs.unlink(outputPath).catch(() => {});
-    }
-  } catch (err) {
+    // Loading and saving often fixes cross-reference tables and corrupt objects
+    const pdfDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
+    const pdfBytes = await pdfDoc.save();
+
+    return new NextResponse(pdfBytes as any, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${file.name.replace(/\.pdf$/i, '')}-repaired.pdf"`,
+      },
+    });
+  } catch (err: any) {
     console.error("Repair PDF Error:", err);
     return NextResponse.json(
-      { error: "Failed to process PDF. Please check if the file is valid and not corrupted." },
+      { error: err.message || "Failed to repair PDF. The file might be too corrupted." },
       { status: 500 }
     );
   }

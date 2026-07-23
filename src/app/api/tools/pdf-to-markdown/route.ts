@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireToolAuth } from "../utils/auth";
 import { withToolAuth } from "@/lib/withToolAuth";
-import { exec, execFile } from "child_process";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
+import pdfParse from "pdf-parse";
 
 async function handler(req: NextRequest, props: any, userId: string) {
   try {
@@ -23,37 +20,22 @@ async function handler(req: NextRequest, props: any, userId: string) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     
-    const tmpDir = os.tmpdir();
-    const id = Math.random().toString(36).substring(7);
-    const inputPath = path.join(tmpDir, `input_${id}.pdf`);
-    const outputPath = path.join(tmpDir, `output_${id}.md`);
+    // Parse the PDF
+    const data = await pdfParse(buffer);
     
-    try {
-      await fs.writeFile(inputPath, buffer);
-      
-      await new Promise((resolve, reject) => {
-        const scriptPath = path.join(process.cwd(), 'pdf_to_md.py');
-        execFile("python", [scriptPath, inputPath, outputPath], { maxBuffer: 1024 * 1024 * 50 }, (error, stdout, stderr) => {
-          if (error) reject(new Error(stderr || error.message || "Unknown execution error"));
-          else resolve(stdout);
-        });
-      });
-      
-      const outBuffer = await fs.readFile(outputPath);
-      return new NextResponse(outBuffer as any, {
-        headers: {
-          "Content-Type": "text/markdown",
-          "Content-Disposition": `attachment; filename="${file.name.replace(/\.pdf$/i, '')}.md"`,
-        },
-      });
-    } finally {
-      await fs.unlink(inputPath).catch(() => {});
-      await fs.unlink(outputPath).catch(() => {});
-    }
-  } catch (err) {
+    // Basic markdown conversion (just text for now, as pure JS doesn't do layout well)
+    const markdownContent = `# Converted PDF\n\n${data.text}`;
+
+    return new NextResponse(markdownContent, {
+      headers: {
+        "Content-Type": "text/markdown",
+        "Content-Disposition": `attachment; filename="${file.name.replace(/\.pdf$/i, '')}.md"`,
+      },
+    });
+  } catch (err: any) {
     console.error("PDF to Markdown Error:", err);
     return NextResponse.json(
-      { error: "Failed to process PDF. Please check if the file is valid and not corrupted." },
+      { error: err.message || "Failed to process PDF." },
       { status: 500 }
     );
   }
