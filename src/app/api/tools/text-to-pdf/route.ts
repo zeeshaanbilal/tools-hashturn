@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generatePdfFromHtml } from "../utils/pdfGenerator";
 import { requireToolAuth } from "../utils/auth";
 import { withToolAuth } from "@/lib/withToolAuth";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 async function handler(req: NextRequest, props: any, userId: string) {
   try {
@@ -20,26 +20,33 @@ async function handler(req: NextRequest, props: any, userId: string) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const textContent = buffer.toString("utf-8");
 
-    // Wrap plain text with margins for PDF
-    const htmlWithMargins = `
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <style>
-            @page { margin: 0in 0.5in; }
-            body { padding: 0.25in; box-sizing: border-box; }
-            pre { font-family: monospace; font-size: 14px; white-space: pre-wrap; }
-          </style>
-        </head>
-        <body>
-          <pre>${textContent}</pre>
-        </body>
-      </html>
-    `;
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    
+    // Very basic text to PDF logic
+    const lines = textContent.split('\n');
+    let page = pdfDoc.addPage();
+    const { width, height } = page.getSize();
+    let y = height - 50;
+    
+    for (const line of lines) {
+        if (y < 50) {
+            page = pdfDoc.addPage();
+            y = height - 50;
+        }
+        page.drawText(line.substring(0, 100), { // truncate long lines for simplicity
+            x: 50,
+            y: y,
+            size: 12,
+            font: font,
+            color: rgb(0, 0, 0),
+        });
+        y -= 15;
+    }
 
-    const pdfBuffer = await generatePdfFromHtml(htmlWithMargins);
+    const pdfBytes = await pdfDoc.save();
 
-    return new NextResponse(pdfBuffer as any, {
+    return new NextResponse(pdfBytes as any, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

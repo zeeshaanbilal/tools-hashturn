@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generatePdfFromHtml } from "../utils/pdfGenerator";
 import { requireToolAuth } from "../utils/auth";
 import { withToolAuth } from "@/lib/withToolAuth";
+import { PDFDocument } from "pdf-lib";
 
 async function handler(req: NextRequest, props: any, userId: string) {
   try {
@@ -13,45 +13,45 @@ async function handler(req: NextRequest, props: any, userId: string) {
     const imageFiles = files.filter((f) => /^(image\/(png|jpe?g|webp))$/i.test(f.type));
     if (imageFiles.length === 0) {
       return NextResponse.json(
-        { error: "No image files provided (png, jpg, jpeg, webp)" },
+        { error: "No image files provided (png, jpg, jpeg)" },
         { status: 400 }
       );
     }
 
-    // Build a simple HTML document that lays out each image on its own page
-    const parts: string[] = [];
+    const pdfDoc = await PDFDocument.create();
+
     for (const f of imageFiles) {
       const buffer = Buffer.from(await f.arrayBuffer());
-      const base64 = buffer.toString("base64");
-      const mime = f.type || "image/png";
-      parts.push(`
-        <div class="page">
-          <img src="data:${mime};base64,${base64}" />
-        </div>
-      `);
+      let image;
+      
+      try {
+        if (f.type === 'image/png') {
+          image = await pdfDoc.embedPng(buffer);
+        } else if (f.type === 'image/jpeg' || f.type === 'image/jpg') {
+          image = await pdfDoc.embedJpg(buffer);
+        } else {
+          // pdf-lib only supports PNG and JPG natively. Skip unsupported.
+          console.warn(`Unsupported image type: ${f.type}`);
+          continue;
+        }
+      } catch (e) {
+        console.error("Failed to embed image", e);
+        continue;
+      }
+
+      const { width, height } = image.scale(1);
+      const page = pdfDoc.addPage([width, height]);
+      page.drawImage(image, {
+        x: 0,
+        y: 0,
+        width: width,
+        height: height,
+      });
     }
 
-    const html = `
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <style>
-            * { box-sizing: border-box; }
-            body { margin: 0; padding: 0; }
-            .page { page-break-after: always; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-            img { max-width: 100%; max-height: 100vh; object-fit: contain; }
-            .page:last-child { page-break-after: auto; }
-          </style>
-        </head>
-        <body>
-          ${parts.join("\n")}
-        </body>
-      </html>
-    `;
+    const pdfBytes = await pdfDoc.save();
 
-    const pdfBuffer = await generatePdfFromHtml(html);
-
-    return new NextResponse(pdfBuffer as any, {
+    return new NextResponse(pdfBytes as any, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
