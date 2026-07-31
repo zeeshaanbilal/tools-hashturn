@@ -154,7 +154,8 @@ model ProcessedFile {
   fileName    String
   fileSize    Int
   fileType    String
-  storagePath String
+  storagePath String?
+  fileData    Bytes?
   status      String   @default("completed")
   createdAt   DateTime @default(now())
 

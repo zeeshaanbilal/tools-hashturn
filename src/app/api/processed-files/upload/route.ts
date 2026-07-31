@@ -42,21 +42,7 @@ export async function POST(req: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Instead of Supabase, save locally
-    const fs = require('fs');
-    const path = require('path');
-    const uploadsDir = path.join(process.cwd(), 'public', 'processed-files', session.user.id);
-    
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-    
-    const localPath = path.join(uploadsDir, `${uniqueId}.${fileExt}`);
-    const storagePath = `processed-files/${session.user.id}/${uniqueId}.${fileExt}`;
-    
-    fs.writeFileSync(localPath, buffer);
-
+    // Save directly to Neon Database
     const saved = await prisma.processedFile.create({
       data: {
         userId: session.user.id,
@@ -64,7 +50,7 @@ export async function POST(req: Request) {
         fileName: originalName,
         fileSize,
         fileType,
-        storagePath, // save relative path
+        fileData: buffer,
         status: "completed",
       },
     });
@@ -72,7 +58,6 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       id: saved.id,
-      storagePath,
     });
   } catch (error) {
     console.error("Upload API error:", error);

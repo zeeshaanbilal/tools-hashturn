@@ -20,7 +20,7 @@ export default function Logo({
 }: props) {
   return (
     <Link href="/" className="flex items-center gap-3 group transition-transform hover:scale-[1.02]">
-      <div className="relative flex items-center justify-center p-1 rounded-xl bg-white/5 backdrop-blur-md border border-white/10 shadow-lg group-hover:border-white/20 transition-all duration-300">
+      <div className="relative flex items-center justify-center transition-all duration-300">
         <Image
           src={"/icon.png"}
           width={100}

@@ -25,16 +25,11 @@ export async function GET(
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 
-    // Download file directly from local storage instead of Supabase
-    const fs = require('fs');
-    const path = require('path');
-    const localPath = path.join(process.cwd(), 'public', file.storagePath as string);
-    
-    if (!fs.existsSync(localPath)) {
-      return NextResponse.json({ error: "File not found on disk" }, { status: 404 });
+    if (!file.fileData) {
+      return NextResponse.json({ error: "File data not found in database" }, { status: 404 });
     }
     
-    const data = fs.readFileSync(localPath);
+    const data = file.fileData;
 
     // Stream with forced download headers
     return new Response(data, {
