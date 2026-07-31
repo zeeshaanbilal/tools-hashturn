@@ -31,66 +31,62 @@ export default function ContactForm() {
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!canSubmit) {
-      // if (!formData.name.trim()) toast.error("Please enter your name");
-      // else if (!emailIsValid) toast.error("Please enter a valid email");
-      // else if (formData.message.trim().length <= 5) toast.error("Message must be at least 6 characters");
       return;
     }
     setIsLoading(true);
     try{
-      // await handleContactForm({
-      //   name: formData.name,
-      //   email: formData.email,
-      //   message: formData.message,
-      // });
-      // toast.success("Mail sent successfully");
+      // ... API call
     }catch(error:any){
       console.error("Error submitting form:", error);
-      const message = error?.message || "Failed to send message. Please try again.";
-      // toast.error(message);
     }finally{
       setIsLoading(false);
-      setFormData({
-        name: "",
-        email: "",
-        message: "",
-      });
+      setFormData({ name: "", email: "", message: "" });
     }
   };
 
   return (
     <form
-      className="p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm bg-white/70 dark:bg-[#040821]/70 backdrop-blur-md"
+      className="p-8 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-xl shadow-gray-200/50 dark:shadow-none bg-white dark:bg-[#11131e] relative overflow-hidden"
       onSubmit={handleSubmit}
     >
-      <h2 className="text-2xl font-semibold mb-4">Send us a Message</h2>
-      <div className="space-y-4">
-        <input
-          type="text"
-          placeholder="Your Name"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <input
-          type="email"
-          placeholder="Your Email"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <textarea
-          rows={4}
-          placeholder="Your Message"
-          value={formData.message}
-          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-          className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-        ></textarea>
+      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full -z-10 blur-2xl"></div>
+      <h2 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Send us a Message</h2>
+      <div className="space-y-5">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Full Name</label>
+          <input
+            type="text"
+            placeholder="John Doe"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className="w-full p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
+          <input
+            type="email"
+            placeholder="john@example.com"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            className="w-full p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Your Message</label>
+          <textarea
+            rows={5}
+            placeholder="How can we help you today?"
+            value={formData.message}
+            onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+            className="w-full p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white resize-none"
+          ></textarea>
+        </div>
         <Button
           variant="primary"
           size="lg"
           type="submit"
-          className={`w-full bg-gradient-to-r from-[#CD1C18] to-[#66023C] py-3 px-6 rounded-lg font-semibold text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 transition duration-200 ${canSubmit ? "opacity-100" : "opacity-50 cursor-not-allowed"}`}
+          className={`w-full py-4 rounded-xl font-bold text-white transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 ${canSubmit ? "opacity-100" : "opacity-50 cursor-not-allowed"}`}
           disabled={!canSubmit}
         >
           {isLoading ? "Sending..." : "Send Message"}
