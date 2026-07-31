@@ -56,7 +56,7 @@ export default function FileUpload({ tool }: { tool: Tool }) {
 
   return (
     <div className="w-full flex flex-col justify-center items-center py-20 space-y-28">
-      {queue.length === 0 && (
+      {queue.length === 0 && tool.slug !== "html-to-pdf" && (
         <UploadContainer
           isDragging={false}
           handlers={{
@@ -67,6 +67,44 @@ export default function FileUpload({ tool }: { tool: Tool }) {
             onFileChange: handleFileChange,
           }}
         />
+      )}
+
+      {tool.slug === "html-to-pdf" && (
+        <div className="w-full lg:w-[65%] text-center">
+          <input 
+            type="url" 
+            placeholder="Enter website URL (e.g. https://google.com)" 
+            className="w-full border border-gray-300 rounded-md p-4 text-lg mb-4" 
+            value={body.url || ""} 
+            onChange={(e) => setBody({ ...body, url: e.target.value })}
+          />
+          <button
+            onClick={async () => {
+              if(!body.url) return alert("Please enter a valid URL");
+              setBody({ ...body, loading: true });
+              try {
+                const form = new FormData();
+                form.append("url", body.url);
+                const res = await fetch(`/api/tools/${tool.slug}`, { method: "POST", body: form });
+                if (!res.ok) throw new Error(await res.text());
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "website.pdf";
+                a.click();
+              } catch (err: any) {
+                alert("Error: " + err.message);
+              } finally {
+                setBody({ ...body, loading: false });
+              }
+            }}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-lg font-semibold"
+            disabled={body.loading}
+          >
+            {body.loading ? "Converting..." : "Convert HTML to PDF"}
+          </button>
+        </div>
       )}
 
       {tool.slug === "watermark-pdf" && (

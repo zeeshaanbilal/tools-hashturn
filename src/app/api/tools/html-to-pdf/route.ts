@@ -8,52 +8,37 @@ async function handler(req: NextRequest, props: any, userId: string) {
     const authError = await requireToolAuth(req);
     if (authError) return authError;
     const formData = await req.formData();
-    const file = formData.get("file") as File | null;
+    const url = formData.get("url") as string | null;
 
-    if (!file || !(file.name.endsWith(".html") || file.name.endsWith(".htm"))) {
+    if (!url || !url.startsWith("http")) {
       return NextResponse.json(
-        { error: "Only .html or .htm files are supported" },
+        { error: "A valid URL (starting with http or https) is required" },
         { status: 400 }
       );
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const htmlContent = buffer.toString("utf-8");
-
-    // We strip HTML formatting for basic PDF (Vercel cannot run Puppeteer)
-    const strippedContent = htmlContent.replace(/<[^>]*>?/gm, '');
-
-    const pdfDoc = await PDFDocument.create();
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    
-    // Very basic text to PDF logic
-    const lines = strippedContent.split('\n');
-    let page = pdfDoc.addPage();
-    const { width, height } = page.getSize();
-    let y = height - 50;
-    
-    for (const line of lines) {
-        if (y < 50) {
-            page = pdfDoc.addPage();
-            y = height - 50;
-        }
-        page.drawText(line.substring(0, 100), {
-            x: 50,
-            y: y,
-            size: 12,
-            font: font,
-            color: rgb(0, 0, 0),
-        });
-        y -= 15;
+    // Call Microlink API to convert URL to PDF
+    const response = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}&pdf=true&meta=false`);
+    if (!response.ok) {
+        throw new Error("Failed to generate PDF from URL");
     }
-
-    const pdfBytes = await pdfDoc.save();
+    const data = await response.json();
+    
+    if (!data.data || !data.data.pdf || !data.data.pdf.url) {
+        throw new Error("PDF generation failed. The website might be blocking access.");
+    }
+    
+    // Fetch the actual PDF bytes
+    const pdfResponse = await fetch(data.data.pdf.url);
+    if(!pdfResponse.ok) throw new Error("Failed to download generated PDF");
+    const pdfBlob = await pdfResponse.blob();
+    const pdfBytes = await pdfBlob.arrayBuffer();
 
     return new NextResponse(pdfBytes as any, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename=${file.name.replace(/\.\w+$/, "")}.pdf`,
+        "Content-Disposition": `attachment; filename=website.pdf`,
       },
     });
   } catch (err) {
