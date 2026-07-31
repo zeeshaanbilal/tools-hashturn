@@ -20,7 +20,6 @@ const getToolStyle = (name: string) => {
   if (n === "merge pdfs") return { icon: <Layers size={20} />, color: "bg-orange-50 text-orange-600 group-hover:bg-orange-100", titleHover: "group-hover:text-orange-600" };
   if (n === "markdown to pdf") return { icon: <FileCode size={20} />, color: "bg-pink-50 text-pink-600 group-hover:bg-pink-100", titleHover: "group-hover:text-pink-600" };
   if (n === "html to pdf") return { icon: <Globe size={20} />, color: "bg-teal-50 text-teal-600 group-hover:bg-teal-100", titleHover: "group-hover:text-teal-600" };
-  if (n === "typed to pdf") return { icon: <Type size={20} />, color: "bg-sky-50 text-sky-600 group-hover:bg-sky-100", titleHover: "group-hover:text-sky-600" };
   if (n === "images to pdf") return { icon: <Images size={20} />, color: "bg-yellow-50 text-yellow-600 group-hover:bg-yellow-100", titleHover: "group-hover:text-yellow-600" };
   if (n === "pdf to text") return { icon: <FileText size={20} />, color: "bg-gray-100 text-gray-700 group-hover:bg-gray-200", titleHover: "group-hover:text-gray-700" };
   if (n === "pdf to images") return { icon: <ImageIcon size={20} />, color: "bg-amber-50 text-amber-600 group-hover:bg-amber-100", titleHover: "group-hover:text-amber-600" };

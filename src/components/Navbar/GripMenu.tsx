@@ -38,8 +38,8 @@ export default function GripMenu({ open, onNavigate, className }: GripMenuProps)
       ["reorder-rotate-pdf", RotateCw],
       ["pdf-to-text", ScanText],
       ["text-to-pdf", Text],
-      ["typed-to-pdf", Type],
       ["markdown-to-pdf", FileText],
+      ["pdf-to-md", FileText],
       ["html-to-pdf", FileCode2],
     ]);
   }, []);

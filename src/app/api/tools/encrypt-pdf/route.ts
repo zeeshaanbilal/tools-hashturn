@@ -26,10 +26,18 @@ async function handler(req: NextRequest, props: any, userId: string) {
       );
     }
 
-    return NextResponse.json(
-      { error: "Encryption is currently not supported on this Vercel environment because it requires native Python/C++ binaries." },
-      { status: 400 }
-    );
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfBytes = new Uint8Array(arrayBuffer);
+    
+    const { encryptPDF } = require('@pdfsmaller/pdf-encrypt');
+    const encryptedBytes = await encryptPDF(pdfBytes, password);
+
+    return new NextResponse(encryptedBytes as any, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename=encrypted.pdf`,
+      },
+    });
   } catch (err: any) {
     console.error("Encrypt PDF Error:", err);
     return NextResponse.json(

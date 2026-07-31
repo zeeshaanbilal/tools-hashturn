@@ -30,6 +30,11 @@ export default function FileUpload({ tool }: { tool: Tool }) {
   };
 
   const handleSubmit = () => {
+    if (tool.slug === "merge-pdfs" && queue.length < 2) {
+      alert("Please select at least 2 files to merge.");
+      return;
+    }
+
     if(tool.slug === "merge-pdfs" || tool.slug === "images-to-pdf"){
       process(`/api/tools/${tool.slug}`, body, "batch");
       return;
