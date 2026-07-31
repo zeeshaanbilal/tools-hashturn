@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireToolAuth } from "../utils/auth";
 import { withToolAuth } from "@/lib/withToolAuth";
 import pdfParse from "pdf-parse";
+import { Document, Packer, Paragraph, TextRun } from "docx";
 
 async function handler(req: NextRequest, props: any, userId: string) {
   try {
@@ -23,11 +24,21 @@ async function handler(req: NextRequest, props: any, userId: string) {
     // Parse the PDF
     const data = await pdfParse(buffer);
     
-    // Return text as .doc (MS Word handles plain text in .doc fine)
-    return new NextResponse(data.text, {
+    const doc = new Document({
+        sections: [{
+            properties: {},
+            children: data.text.split('\n').map(line => new Paragraph({
+                children: [new TextRun(line)]
+            }))
+        }]
+    });
+    
+    const docxBuffer = await Packer.toBuffer(doc);
+
+    return new NextResponse(docxBuffer as any, {
       headers: {
-        "Content-Type": "application/msword",
-        "Content-Disposition": `attachment; filename="${file.name.replace(/\.pdf$/i, '')}.doc"`,
+        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": `attachment; filename="${file.name.replace(/\.pdf$/i, '')}.docx"`,
       },
     });
   } catch (err: any) {

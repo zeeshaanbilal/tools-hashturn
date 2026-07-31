@@ -29,9 +29,37 @@ export default function FileUpload({ tool }: { tool: Tool }) {
     addFiles(Array.from(e.dataTransfer.files));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (tool.slug === "merge-pdfs" && queue.length < 2) {
       alert("Please select at least 2 files to merge.");
+      return;
+    }
+
+    if (tool.slug === "pdf-to-images") {
+      const items = queue.filter(q => q.status === "queued");
+      if (items.length === 0) return;
+      
+      const { convertPdfToImagesZip } = await import("@/utils/pdfToImages");
+      
+      // Update UI manually since we bypass process()
+      setBody({ ...body, loading: true, progress: "Starting..." });
+      try {
+        for (const item of items) {
+          const zipBlob = await convertPdfToImagesZip(item.file, (msg) => {
+            setBody(prev => ({ ...prev, progress: msg }));
+          });
+          
+          const url = URL.createObjectURL(zipBlob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = item.file.name.replace(/\.pdf$/i, "") + "-images.zip";
+          a.click();
+        }
+      } catch (err: any) {
+        alert("Error converting PDF to Images: " + err.message);
+      } finally {
+        setBody(prev => ({ ...prev, loading: false, progress: "" }));
+      }
       return;
     }
 
@@ -168,12 +196,18 @@ export default function FileUpload({ tool }: { tool: Tool }) {
       />
 
       {queue.length > 0 && requiresManualSubmit && !isProcessing && !batchResultUrl && (
-        <button
-          onClick={handleSubmit}
-          className="cursor-pointer px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:shadow-lg transition-all hover:-translate-y-0.5"
-        >
-          Process {queue.length} File(s)
-        </button>
+        <div className="flex flex-col items-center">
+          {body.progress && (
+            <p className="text-sm text-gray-500 mb-2">{body.progress}</p>
+          )}
+          <button
+            onClick={handleSubmit}
+            disabled={body.loading}
+            className="cursor-pointer px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {body.loading ? "Processing..." : `Process ${queue.length} File(s)`}
+          </button>
+        </div>
       )}
 
       {batchResultUrl && (
